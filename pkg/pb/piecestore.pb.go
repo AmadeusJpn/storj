@@ -285,7 +285,7 @@ func (m *PieceId) GetAuthorization() *SignedMessage {
 
 type PieceSummary struct {
 	Id                string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Size_             int64  `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
+	Size              int64  `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
 	ExpirationUnixSec int64  `protobuf:"varint,3,opt,name=expiration_unix_sec,json=expirationUnixSec,proto3" json:"expiration_unix_sec,omitempty"`
 }
 
@@ -301,9 +301,9 @@ func (m *PieceSummary) GetId() string {
 	return ""
 }
 
-func (m *PieceSummary) GetSize_() int64 {
+func (m *PieceSummary) GetSize() int64 {
 	if m != nil {
-		return m.Size_
+		return m.Size
 	}
 	return 0
 }
@@ -349,7 +349,7 @@ func (m *PieceRetrieval) GetAuthorization() *SignedMessage {
 
 type PieceRetrieval_PieceData struct {
 	Id     string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Size_  int64  `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
+	Size   int64  `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
 	Offset int64  `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
 }
 
@@ -367,9 +367,9 @@ func (m *PieceRetrieval_PieceData) GetId() string {
 	return ""
 }
 
-func (m *PieceRetrieval_PieceData) GetSize_() int64 {
+func (m *PieceRetrieval_PieceData) GetSize() int64 {
 	if m != nil {
-		return m.Size_
+		return m.Size
 	}
 	return 0
 }
@@ -382,7 +382,7 @@ func (m *PieceRetrieval_PieceData) GetOffset() int64 {
 }
 
 type PieceRetrievalStream struct {
-	Size_   int64  `protobuf:"varint,1,opt,name=size,proto3" json:"size,omitempty"`
+	Size    int64  `protobuf:"varint,1,opt,name=size,proto3" json:"size,omitempty"`
 	Content []byte `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
 }
 
@@ -391,9 +391,9 @@ func (m *PieceRetrievalStream) String() string            { return proto.Compact
 func (*PieceRetrievalStream) ProtoMessage()               {}
 func (*PieceRetrievalStream) Descriptor() ([]byte, []int) { return fileDescriptorPiecestore, []int{6} }
 
-func (m *PieceRetrievalStream) GetSize_() int64 {
+func (m *PieceRetrievalStream) GetSize() int64 {
 	if m != nil {
-		return m.Size_
+		return m.Size
 	}
 	return 0
 }

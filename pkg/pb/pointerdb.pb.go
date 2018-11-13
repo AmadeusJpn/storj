@@ -185,7 +185,7 @@ type Pointer struct {
 	Type           Pointer_DataType            `protobuf:"varint,1,opt,name=type,proto3,enum=pointerdb.Pointer_DataType" json:"type,omitempty"`
 	InlineSegment  []byte                      `protobuf:"bytes,3,opt,name=inline_segment,json=inlineSegment,proto3" json:"inline_segment,omitempty"`
 	Remote         *RemoteSegment              `protobuf:"bytes,4,opt,name=remote" json:"remote,omitempty"`
-	Size_          int64                       `protobuf:"varint,5,opt,name=size,proto3" json:"size,omitempty"`
+	Size           int64                       `protobuf:"varint,5,opt,name=size,proto3" json:"size,omitempty"`
 	CreationDate   *google_protobuf2.Timestamp `protobuf:"bytes,6,opt,name=creation_date,json=creationDate" json:"creation_date,omitempty"`
 	ExpirationDate *google_protobuf2.Timestamp `protobuf:"bytes,7,opt,name=expiration_date,json=expirationDate" json:"expiration_date,omitempty"`
 	Metadata       []byte                      `protobuf:"bytes,8,opt,name=metadata,proto3" json:"metadata,omitempty"`
@@ -217,9 +217,9 @@ func (m *Pointer) GetRemote() *RemoteSegment {
 	return nil
 }
 
-func (m *Pointer) GetSize_() int64 {
+func (m *Pointer) GetSize() int64 {
 	if m != nil {
-		return m.Size_
+		return m.Size
 	}
 	return 0
 }
@@ -260,7 +260,7 @@ func (m *PutRequest) GetPath() Path {
 	if m != nil {
 		return m.Path
 	}
-	return nil
+	return ""
 }
 
 func (m *PutRequest) GetPointer() *Pointer {
@@ -284,7 +284,7 @@ func (m *GetRequest) GetPath() Path {
 	if m != nil {
 		return m.Path
 	}
-	return nil
+	return ""
 }
 
 // ListRequest is a request message for the List rpc call
@@ -464,7 +464,7 @@ func (m *DeleteRequest) GetPath() Path {
 	if m != nil {
 		return m.Path
 	}
-	return nil
+	return ""
 }
 
 // DeleteResponse is a response message for the Delete rpc call

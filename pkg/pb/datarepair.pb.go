@@ -28,7 +28,7 @@ func (m *InjuredSegment) GetPath() Path {
 	if m != nil {
 		return m.Path
 	}
-	return nil
+	return ""
 }
 
 func (m *InjuredSegment) GetLostPieces() []int32 {
