@@ -6,6 +6,8 @@ option go_package = "pb";
 
 package kadcli;
 
+import "gogo.proto";
+
 service KadCli {
   // CountNodes returns the number of nodes in the cache and in the routing table
   rpc CountNodes(CountNodesRequest) returns (CountNodesResponse);

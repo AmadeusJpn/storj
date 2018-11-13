@@ -6,6 +6,8 @@ option go_package = "pb";
 
 package piecestoreroutes;
 
+import "gogo.proto";
+
 service PieceStoreRoutes {
   rpc Piece(PieceId) returns (PieceSummary) {}
 

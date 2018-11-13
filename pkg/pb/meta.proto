@@ -6,6 +6,8 @@ option go_package = "pb";
 
 package streams;
 
+import "gogo.proto";
+
 message SegmentMeta {
     bytes encrypted_key = 1;
     bytes key_nonce = 2;

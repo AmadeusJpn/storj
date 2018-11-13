@@ -6,6 +6,8 @@ option go_package = "pb";
 
 package pointerdb;
 
+import "gogo.proto";
+
 import "google/protobuf/timestamp.proto";
 import "overlay.proto";
 import "piecestore.proto";
@@ -70,13 +72,13 @@ message Pointer {
 
 // PutRequest is a request message for the Put rpc call
 message PutRequest {
-  string path = 1;
+  bytes path = 1 [(gogoproto.casttype) = "Path"];
   Pointer pointer = 2;
 }
 
 // GetRequest is a request message for the Get rpc call
 message GetRequest {
-  string path = 1;
+  bytes path = 1 [(gogoproto.casttype) = "Path"];
 }
 
 // ListRequest is a request message for the List rpc call
@@ -114,7 +116,7 @@ message ListResponse {
 }
 
 message DeleteRequest {
-  string path = 1;
+  bytes path = 1 [(gogoproto.casttype) = "Path"];
 }
 
 // DeleteResponse is a response message for the Delete rpc call

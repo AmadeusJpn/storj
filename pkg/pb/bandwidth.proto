@@ -6,6 +6,7 @@ option go_package = "pb";
 
 package bandwidth;
 
+import "gogo.proto";
 import "piecestore.proto";
 
 service Bandwidth {

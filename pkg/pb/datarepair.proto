@@ -6,8 +6,10 @@ option go_package = "pb";
 
 package repair;
 
+import "gogo.proto";
+
 // InjuredSegment is the queue item used for the data repair queue
 message InjuredSegment {
-    string path = 1;
+    bytes path = 1 [(gogoproto.casttype) = "Path"];
     repeated int32 lost_pieces = 2;
 }
