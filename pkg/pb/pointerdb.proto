@@ -83,9 +83,9 @@ message GetRequest {
 
 // ListRequest is a request message for the List rpc call
 message ListRequest {
-  string prefix = 1;
-  string start_after = 2;
-  string end_before = 3;
+  bytes prefix = 1      [(gogoproto.casttype) = "Path"];
+  bytes start_after = 2 [(gogoproto.casttype) = "Path"];
+  bytes end_before = 3  [(gogoproto.casttype) = "Path"];
   bool recursive = 4;
   int32 limit = 5;
   fixed32 meta_flags = 6;
@@ -106,7 +106,7 @@ message GetResponse {
 // ListResponse is a response message for the List rpc call
 message ListResponse {
   message Item {
-    string  path = 1;
+    bytes  path = 1 [(gogoproto.casttype) = "Path"];
     Pointer pointer = 2;
     bool    is_prefix = 3;
   }
@@ -125,8 +125,8 @@ message DeleteResponse {
 
 // IterateRequest is a request message for the Iterate rpc call
 message IterateRequest {
-  string prefix = 1;
-  string first = 2;
+  bytes prefix = 1 [(gogoproto.casttype) = "Path"];
+  bytes first = 2 [(gogoproto.casttype) = "Path"];
   bool recurse = 3;
   bool reverse = 4;
 }

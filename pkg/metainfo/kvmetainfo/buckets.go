@@ -77,7 +77,7 @@ func (db *Buckets) ListBuckets(ctx context.Context, options storj.BucketListOpti
 
 	// TODO: remove this hack-fix of specifying the last key
 	if options.Cursor == "" && (options.Direction == storj.Before || options.Direction == storj.Backward) {
-		endBefore = "\x7f\x7f\x7f\x7f\x7f\x7f\x7f"
+		endBefore = "\xff\xff\xff\xff\xff\xff\xff"
 	}
 
 	items, more, err := db.store.List(ctx, startAfter, endBefore, options.Limit)
