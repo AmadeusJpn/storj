@@ -12,9 +12,11 @@ import (
 
 	"storj.io/storj/pkg/datarepair/queue"
 	"storj.io/storj/pkg/dht"
+	"storj.io/storj/pkg/irreparabledb/irrdbclient"
 	"storj.io/storj/pkg/node"
 	"storj.io/storj/pkg/pb"
 	"storj.io/storj/pkg/pointerdb"
+	"storj.io/storj/pkg/provider"
 	"storj.io/storj/pkg/utils"
 	"storj.io/storj/storage"
 )
@@ -26,24 +28,41 @@ type Checker interface {
 
 // Checker contains the information needed to do checks for missing pieces
 type checker struct {
-	pointerdb   *pointerdb.Server
-	repairQueue *queue.Queue
-	overlay     pb.OverlayServer
-	limit       int
-	logger      *zap.Logger
-	ticker      *time.Ticker
+	pointerdb     *pointerdb.Server
+	repairQueue   *queue.Queue
+	overlay       pb.OverlayServer
+	irreparabledb irrdbclient.Client
+	limit         int
+	logger        *zap.Logger
+	ticker        *time.Ticker
 }
 
 // NewChecker creates a new instance of checker
-func newChecker(pointerdb *pointerdb.Server, repairQueue *queue.Queue, overlay pb.OverlayServer, limit int, logger *zap.Logger, interval time.Duration) *checker {
-	return &checker{
-		pointerdb:   pointerdb,
-		repairQueue: repairQueue,
-		overlay:     overlay,
-		limit:       limit,
-		logger:      logger,
-		ticker:      time.NewTicker(interval),
+func newChecker(ctx context.Context, pointerdb *pointerdb.Server, repairQueue *queue.Queue, overlay pb.OverlayServer, limit int, logger *zap.Logger, interval time.Duration) (*checker, error) {
+	ca, err := provider.NewTestCA(ctx)
+	if err != nil {
+		return nil, err
 	}
+	identity, err := ca.NewIdentity()
+	if err != nil {
+		return nil, err
+	}
+
+	dummyirrDBPort := "127.0.0.1:9999"
+	dummyApiKey := []byte("AdummyAPIKEY")
+	irrclient, err := irrdbclient.NewClient(identity, dummyirrDBPort, []byte(dummyApiKey))
+	if err != nil {
+		return nil, err
+	}
+	return &checker{
+		pointerdb:     pointerdb,
+		repairQueue:   repairQueue,
+		overlay:       overlay,
+		irreparabledb: irrclient,
+		limit:         limit,
+		logger:        logger,
+		ticker:        time.NewTicker(interval),
+	}, nil
 }
 
 // Run the checker loop
@@ -101,13 +120,20 @@ func (c *checker) identifyInjuredSegments(ctx context.Context) (err error) {
 					return Error.New("error getting offline nodes %s", err)
 				}
 				numHealthy := len(nodeIDs) - len(missingPieces)
-				if int32(numHealthy) < pointer.Remote.Redundancy.RepairThreshold {
+				if (int32(numHealthy) >= pointer.Remote.Redundancy.MinReq) && (int32(numHealthy) < pointer.Remote.Redundancy.RepairThreshold) {
 					err = c.repairQueue.Enqueue(&pb.InjuredSegment{
 						Path:       string(item.Key),
 						LostPieces: missingPieces,
 					})
 					if err != nil {
 						return Error.New("error adding injured segment to queue %s", err)
+					} else if int32(numHealthy) < pointer.Remote.Redundancy.MinReq {
+						// make an entry in to the postgres irreparable table
+						err = c.irreparabledb.Create(ctx, item.Key, item.Value)
+						if err != nil {
+							return Error.New("couldn't make an entry into irreparable db: %s", err)
+						}
+
 					}
 				}
 			}
