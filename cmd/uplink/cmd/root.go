@@ -7,14 +7,14 @@ import (
 	"context"
 	"path/filepath"
 
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 
 	"storj.io/storj/pkg/cfgstruct"
 	"storj.io/storj/pkg/miniogw"
 	"storj.io/storj/pkg/storage/buckets"
 )
-
-const defaultConfDir = "$HOME/.storj/uplink"
 
 // Config is miniogw.Config configuration
 type Config struct {
@@ -35,8 +35,19 @@ var GWCmd = &cobra.Command{
 	Short: "The Storj client-side S3 gateway",
 }
 
+func makeUplinkPath() (defaultConfDir string) {
+	base, err := homedir.Dir()
+	if err != nil {
+		zap.S().Errorf("error setting up uplink directory path: %s", err)
+		return ""
+	}
+	return filepath.Join(base, ".storj", "uplink")
+}
+
 func addCmd(cmd *cobra.Command, root *cobra.Command) *cobra.Command {
 	root.AddCommand(cmd)
+
+	defaultConfDir := makeUplinkPath()
 	cfgstruct.Bind(cmd.Flags(), &cfg, cfgstruct.ConfDir(defaultConfDir))
 	cmd.Flags().String("config", filepath.Join(defaultConfDir, "config.yaml"), "path to configuration")
 	return cmd
