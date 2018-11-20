@@ -5,6 +5,7 @@ package checker
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -14,9 +15,12 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
+
 	"storj.io/storj/pkg/auth"
 	"storj.io/storj/pkg/datarepair/queue"
 	"storj.io/storj/pkg/dht"
+	"storj.io/storj/pkg/irreparabledb"
+	dbx "storj.io/storj/pkg/irreparabledb/dbx"
 	"storj.io/storj/pkg/node"
 	"storj.io/storj/pkg/overlay"
 	"storj.io/storj/pkg/overlay/mocks"
@@ -87,7 +91,10 @@ func TestIdentifyInjuredSegments(t *testing.T) {
 	overlayServer := mocks.NewOverlay(nodes)
 	limit := 0
 	interval := time.Second
-	checker, err := newChecker(ctx, pointerdb, repairQueue, overlayServer, limit, logger, interval)
+	dbPath := getDBPath()
+	irrdb, _, err := getServerAndDB(dbPath)
+	assert.NoError(t, err)
+	checker, err := newChecker(pointerdb, repairQueue, overlayServer, irrdb, limit, logger, interval)
 	assert.NoError(t, err)
 	err = checker.identifyInjuredSegments(ctx)
 	assert.NoError(t, err)
@@ -132,7 +139,10 @@ func TestOfflineNodes(t *testing.T) {
 	overlayServer := mocks.NewOverlay(nodes)
 	limit := 0
 	interval := time.Second
-	checker, err := newChecker(ctx, pointerdb, repairQueue, overlayServer, limit, logger, interval)
+	dbPath := getDBPath()
+	irrdb, _, err := getServerAndDB(dbPath)
+	assert.NoError(t, err)
+	checker, err := newChecker(pointerdb, repairQueue, overlayServer, irrdb, limit, logger, interval)
 	assert.NoError(t, err)
 	offline, err := checker.offlineNodes(ctx, nodeIDs)
 	assert.NoError(t, err)
@@ -203,8 +213,11 @@ func BenchmarkIdentifyInjuredSegments(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		interval := time.Second
-		checker, err := newChecker(ctx, pointerdb, repairQueue, overlayServer, limit, logger, interval)
-		assert.NoError(t, err)
+		dbPath := getDBPath()
+		irrdb, _, err := getServerAndDB(dbPath)
+		assert.NoError(b, err)
+		checker, err := newChecker(pointerdb, repairQueue, overlayServer, irrdb, limit, logger, interval)
+		assert.NoError(b, err)
 		err = checker.identifyInjuredSegments(ctx)
 		assert.NoError(b, err)
 
@@ -222,4 +235,20 @@ func BenchmarkIdentifyInjuredSegments(b *testing.B) {
 			assert.True(b, proto.Equal(segs[i], dequeued[i]))
 		}
 	}
+}
+
+func getDBPath() string {
+	return fmt.Sprintf("file:memdb%d?mode=memory&cache=shared", rand.Int63())
+}
+
+func getServerAndDB(path string) (s *irreparabledb.Server, db *dbx.DB, err error) {
+	s, err = irreparabledb.NewServer("sqlite3", path, zap.NewNop())
+	if err != nil {
+		return &irreparabledb.Server{}, &dbx.DB{}, err
+	}
+	db, err = dbx.Open("sqlite3", path)
+	if err != nil {
+		return &irreparabledb.Server{}, &dbx.DB{}, err
+	}
+	return s, db, err
 }
