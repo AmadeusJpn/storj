@@ -13,9 +13,10 @@ import (
 	monkit "gopkg.in/spacemonkeygo/monkit.v2"
 
 	"storj.io/storj/internal/migrate"
+	"storj.io/storj/pkg/auth"
 	dbx "storj.io/storj/pkg/irreparabledb/dbx"
 	"storj.io/storj/pkg/pb"
-	"storj.io/storj/pkg/pointerdb/auth"
+	pdbauth "storj.io/storj/pkg/pointerdb/auth"
 )
 
 var (
@@ -46,8 +47,12 @@ func NewServer(driver, source string, logger *zap.Logger) (*Server, error) {
 	}, nil
 }
 
-func (s *Server) validateAuth(APIKeyBytes []byte) error {
-	if !auth.ValidateAPIKey(string(APIKeyBytes)) {
+func (s *Server) validateAuth(ctx context.Context) error {
+	APIKeyBytes, ok := auth.GetAPIKey(ctx)
+	if !ok {
+		return Error.New("no api key was provided")
+	}
+	if !pdbauth.ValidateAPIKey(string(APIKeyBytes)) {
 		s.logger.Error("unauthorized request: ", zap.Error(status.Errorf(codes.Unauthenticated, "Invalid API credential")))
 		return status.Errorf(codes.Unauthenticated, "Invalid API credential")
 	}
@@ -56,6 +61,24 @@ func (s *Server) validateAuth(APIKeyBytes []byte) error {
 
 // Put a db entry for the provided remote segment info
 func (s *Server) Put(ctx context.Context, putReq *pb.PutIrrSegRequest) (resp *pb.PutIrrSegResponse, err error) {
+	info := putReq.Info
+
+	getReq := &pb.GetIrrSegRequest{
+		Key:    info.Key,
+		APIKey: putReq.APIKey,
+	}
+
+	// entry exists already?
+	getResp, _ := s.Get(ctx, getReq)
+	if getResp != nil {
+		rmtSegInfo := putReq.Info
+		rmtSegInfo.RepairAttemptCount = rmtSegInfo.GetRepairAttemptCount() + int64(1)
+		updateReq := &pb.PutIrrSegRequest{
+			Info:   rmtSegInfo,
+			APIKey: putReq.APIKey,
+		}
+		return s.Update(ctx, updateReq)
+	}
 	return s.Create(ctx, putReq)
 }
 
@@ -64,8 +87,7 @@ func (s *Server) Create(ctx context.Context, putReq *pb.PutIrrSegRequest) (resp 
 	defer mon.Task()(&ctx)(&err)
 	s.logger.Debug("entering irreparabledb Create")
 
-	APIKeyBytes := putReq.APIKey
-	if err := s.validateAuth(APIKeyBytes); err != nil {
+	if err := s.validateAuth(ctx); err != nil {
 		return nil, err
 	}
 
@@ -96,8 +118,7 @@ func (s *Server) Get(ctx context.Context, getReq *pb.GetIrrSegRequest) (resp *pb
 	defer mon.Task()(&ctx)(&err)
 	s.logger.Debug("entering irreparabaledb Get")
 
-	APIKeyBytes := getReq.APIKey
-	err = s.validateAuth(APIKeyBytes)
+	err = s.validateAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -125,8 +146,7 @@ func (s *Server) Delete(ctx context.Context, delReq *pb.DeleteIrrSegRequest) (re
 	defer mon.Task()(&ctx)(&err)
 	s.logger.Debug("entering irreparabaledb Delete")
 
-	APIKeyBytes := delReq.APIKey
-	err = s.validateAuth(APIKeyBytes)
+	err = s.validateAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -138,5 +158,39 @@ func (s *Server) Delete(ctx context.Context, delReq *pb.DeleteIrrSegRequest) (re
 
 	return &pb.DeleteIrrSegResponse{
 		Status: pb.DeleteIrrSegResponse_OK,
+	}, nil
+}
+
+// Update a db entry for the provided remote segment info
+func (s *Server) Update(ctx context.Context, putReq *pb.PutIrrSegRequest) (resp *pb.PutIrrSegResponse, err error) {
+	defer mon.Task()(&ctx)(&err)
+	s.logger.Debug("entering irreparabledb Update")
+
+	if err := s.validateAuth(ctx); err != nil {
+		return nil, err
+	}
+
+	info := putReq.Info
+	update := dbx.Irreparabledb_Update_Fields{
+		Segmentval:         dbx.Irreparabledb_Segmentval(info.Val),
+		PiecesLostCount:    dbx.Irreparabledb_PiecesLostCount(info.LostPiecesCount),
+		SegDamagedUnixSec:  dbx.Irreparabledb_SegDamagedUnixSec(info.RepairUnixSec),
+		SegCreatedAt:       dbx.Irreparabledb_SegCreatedAt(time.Unix(info.RepairUnixSec, 0)),
+		RepairAttemptCount: dbx.Irreparabledb_RepairAttemptCount(info.RepairAttemptCount),
+	}
+	_, err = s.DB.Update_Irreparabledb_By_Segmentkey(
+		ctx,
+		dbx.Irreparabledb_Segmentkey(info.Key),
+		update,
+	)
+	if err != nil {
+		return &pb.PutIrrSegResponse{
+			Status: pb.PutIrrSegResponse_FAIL,
+		}, status.Errorf(codes.Internal, err.Error())
+	}
+
+	s.logger.Debug("created in the db: " + string(info.Key))
+	return &pb.PutIrrSegResponse{
+		Status: pb.PutIrrSegResponse_OK,
 	}, nil
 }

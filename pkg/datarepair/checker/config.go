@@ -26,7 +26,7 @@ type Config struct {
 }
 
 // Initialize a Checker struct
-func (c Config) initialize(ctx context.Context, server *provider.Provider) (Checker, error) {
+func (c Config) initialize(ctx context.Context) (Checker, error) {
 	pdb := pointerdb.LoadFromContext(ctx)
 	irrdb := irreparabledb.LoadFromContext(ctx)
 	var o pb.OverlayServer
@@ -42,12 +42,12 @@ func (c Config) initialize(ctx context.Context, server *provider.Provider) (Chec
 	}
 	repairQueue := queue.NewQueue(redisQ)
 
-	return newChecker(pdb, repairQueue, o, irrdb, 0, zap.L(), c.Interval)
+	return newChecker(pdb, repairQueue, o, irrdb, 0, zap.L(), c.Interval), nil
 }
 
 // Run runs the checker with configured values
 func (c Config) Run(ctx context.Context, server *provider.Provider) (err error) {
-	check, err := c.initialize(ctx, server)
+	check, err := c.initialize(ctx)
 	if err != nil {
 		return err
 	}

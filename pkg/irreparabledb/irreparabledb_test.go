@@ -13,12 +13,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
+	"storj.io/storj/pkg/auth"
 	dbx "storj.io/storj/pkg/irreparabledb/dbx"
 	"storj.io/storj/pkg/pb"
 )
 
 var (
-	ctx = context.Background()
+	apiKey = []byte("")
+	ctx    = auth.WithAPIKey(context.Background(), apiKey)
 )
 
 func TestPutDoesNotExist(t *testing.T) {
@@ -26,17 +28,18 @@ func TestPutDoesNotExist(t *testing.T) {
 	irrdb, _, err := getServerAndDB(dbPath)
 	assert.NoError(t, err)
 
-	apiKey := []byte("")
 	rmtsegkey := []byte("irreparableremotesegkey")
 	rmtsegval := []byte("irreparableremotesegval")
 	rmtseginfo := &pb.RmtSegInfo{
 		Key: rmtsegkey,
 		Val: rmtsegval,
 	}
+
 	createReq := &pb.PutIrrSegRequest{
 		Info:   rmtseginfo,
 		APIKey: apiKey,
 	}
+
 	resp, err := irrdb.Put(ctx, createReq)
 	assert.NoError(t, err)
 	status := resp.Status
@@ -48,7 +51,6 @@ func TestPutExists(t *testing.T) {
 	irrdb, db, err := getServerAndDB(dbPath)
 	assert.NoError(t, err)
 
-	apiKey := []byte("")
 	rmtsegkey := []byte("irreparableremotesegkey")
 	rmtsegval := []byte("irreparableremotesegval")
 	piecesLost := int64(10)
@@ -70,8 +72,10 @@ func TestPutExists(t *testing.T) {
 		APIKey: apiKey,
 	}
 
-	_, err = irrdb.Put(ctx, createReq)
-	assert.Error(t, err)
+	resp, err := irrdb.Put(ctx, createReq)
+	assert.NoError(t, err)
+	status := resp.Status
+	assert.EqualValues(t, 1, status)
 }
 
 func TestCreateWithRmtSegInfo(t *testing.T) {
@@ -79,7 +83,6 @@ func TestCreateWithRmtSegInfo(t *testing.T) {
 	irrdb, db, err := getServerAndDB(dbPath)
 	assert.NoError(t, err)
 
-	apiKey := []byte("")
 	rmtsegkey := []byte("irreparableremotesegkey")
 	rmtsegval := []byte("irreparableremotesegval")
 	piecesLost := int64(10)
@@ -118,7 +121,6 @@ func TestGetExists(t *testing.T) {
 	irrdb, db, err := getServerAndDB(dbPath)
 	assert.NoError(t, err)
 
-	apiKey := []byte("")
 	rmtsegkey := []byte("irreparableremotesegkey")
 	rmtsegval := []byte("irreparableremotesegval")
 	piecesLost := int64(10)
@@ -149,7 +151,6 @@ func TestDeleteExists(t *testing.T) {
 	irrdb, db, err := getServerAndDB(dbPath)
 	assert.NoError(t, err)
 
-	apiKey := []byte("")
 	rmtsegkey := []byte("irreparableremotesegkey")
 	rmtsegval := []byte("irreparableremotesegval")
 	piecesLost := int64(10)

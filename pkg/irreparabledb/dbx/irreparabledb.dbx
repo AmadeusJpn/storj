@@ -3,7 +3,7 @@ model irreparabledb (
 	key segmentkey
 
 	field segmentkey blob
-	field segmentval blob
+	field segmentval blob (updatable)
 	field pieces_lost_count int64 (updatable)
 	field seg_damaged_unix_sec int64 (updatable)
 	field seg_created_at timestamp ( updatable )

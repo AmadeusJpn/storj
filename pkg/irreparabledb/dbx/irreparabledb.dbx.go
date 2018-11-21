@@ -433,6 +433,7 @@ type Irreparabledb struct {
 func (Irreparabledb) _Table() string { return "irreparabledbs" }
 
 type Irreparabledb_Update_Fields struct {
+	Segmentval         Irreparabledb_Segmentval_Field
 	PiecesLostCount    Irreparabledb_PiecesLostCount_Field
 	SegDamagedUnixSec  Irreparabledb_SegDamagedUnixSec_Field
 	SegCreatedAt       Irreparabledb_SegCreatedAt_Field
@@ -884,6 +885,11 @@ func (obj *postgresImpl) Update_Irreparabledb_By_Segmentkey(ctx context.Context,
 	var __values []interface{}
 	var __args []interface{}
 
+	if update.Segmentval._set {
+		__values = append(__values, update.Segmentval.value())
+		__sets_sql.SQLs = append(__sets_sql.SQLs, __sqlbundle_Literal("segmentval = ?"))
+	}
+
 	if update.PiecesLostCount._set {
 		__values = append(__values, update.PiecesLostCount.value())
 		__sets_sql.SQLs = append(__sets_sql.SQLs, __sqlbundle_Literal("pieces_lost_count = ?"))
@@ -1117,6 +1123,11 @@ func (obj *sqlite3Impl) Update_Irreparabledb_By_Segmentkey(ctx context.Context,
 	__sets_sql := __sqlbundle_Literals{Join: ", "}
 	var __values []interface{}
 	var __args []interface{}
+
+	if update.Segmentval._set {
+		__values = append(__values, update.Segmentval.value())
+		__sets_sql.SQLs = append(__sets_sql.SQLs, __sqlbundle_Literal("segmentval = ?"))
+	}
 
 	if update.PiecesLostCount._set {
 		__values = append(__values, update.PiecesLostCount.value())

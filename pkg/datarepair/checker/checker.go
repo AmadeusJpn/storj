@@ -10,6 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 
+	"storj.io/storj/pkg/auth"
 	"storj.io/storj/pkg/datarepair/queue"
 	"storj.io/storj/pkg/dht"
 	"storj.io/storj/pkg/irreparabledb"
@@ -31,14 +32,13 @@ type checker struct {
 	repairQueue *queue.Queue
 	overlay     pb.OverlayServer
 	irrdb       *irreparabledb.Server
-	APIKey      []byte
 	limit       int
 	logger      *zap.Logger
 	ticker      *time.Ticker
 }
 
 // newChecker creates a new instance of checker
-func newChecker(pointerdb *pointerdb.Server, repairQueue *queue.Queue, overlay pb.OverlayServer, irrdb *irreparabledb.Server, limit int, logger *zap.Logger, interval time.Duration) (*checker, error) {
+func newChecker(pointerdb *pointerdb.Server, repairQueue *queue.Queue, overlay pb.OverlayServer, irrdb *irreparabledb.Server, limit int, logger *zap.Logger, interval time.Duration) *checker {
 	return &checker{
 		pointerdb:   pointerdb,
 		repairQueue: repairQueue,
@@ -47,7 +47,7 @@ func newChecker(pointerdb *pointerdb.Server, repairQueue *queue.Queue, overlay p
 		limit:       limit,
 		logger:      logger,
 		ticker:      time.NewTicker(interval),
-	}, nil
+	}
 }
 
 // Run the checker loop
@@ -122,9 +122,15 @@ func (c *checker) identifyInjuredSegments(ctx context.Context) (err error) {
 						RepairUnixSec:      time.Now().Unix(),
 						RepairAttemptCount: int64(1),
 					}
+
+					apiKey, ok := auth.GetAPIKey(ctx)
+					if !ok {
+						return Error.New("no api key was provided")
+					}
+
 					putReq := &pb.PutIrrSegRequest{
 						Info:   rmtSegInfo,
-						APIKey: c.APIKey,
+						APIKey: apiKey,
 					}
 					_, err = c.irrdb.Put(ctx, putReq)
 					if err != nil {
